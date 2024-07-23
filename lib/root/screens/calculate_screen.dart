@@ -9,10 +9,6 @@ class CalculateScreen extends StatefulWidget {
 
 class _CalculateScreenState extends State<CalculateScreen> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _weightController = TextEditingController();
-  final TextEditingController _heightController = TextEditingController();
-  final TextEditingController _ageController = TextEditingController();
-  String _selectedTrimester = 'Trimester 1';
 
   void _calculateNutrition() {
     if (_formKey.currentState!.validate()) {
@@ -27,91 +23,228 @@ class _CalculateScreenState extends State<CalculateScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Calculate Nutrition'),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.black),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
+        child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextFormField(
-                controller: _weightController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Weight (kg)',
-                  border: OutlineInputBorder(),
+              const Text(
+                'Calculate Nutrition',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
                 ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your weight';
-                  }
-                  return null;
-                },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _heightController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Height (cm)',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your height';
-                  }
-                  return null;
-                },
-              ),
+              _buildStatusCards(),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _ageController,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Age',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your age';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownButtonFormField<String>(
-                value: _selectedTrimester,
-                items: <String>['Trimester 1', 'Trimester 2', 'Trimester 3']
-                    .map((String value) {
-                  return DropdownMenuItem<String>(
-                    value: value,
-                    child: Text(value),
-                  );
-                }).toList(),
-                onChanged: (newValue) {
-                  setState(() {
-                    _selectedTrimester = newValue!;
-                  });
-                },
-                decoration: const InputDecoration(
-                  labelText: 'Trimester',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 32),
-              Center(
-                child: ElevatedButton(
-                  onPressed: _calculateNutrition,
-                  child: const Text('Calculate'),
-                  style: ElevatedButton.styleFrom(
-                      // primary: const Color.fromARGB(255, 255, 241, 118),
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    const Text(
+                      'Today\'s journey',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    _buildJourneyCard(
+                      icon: Icons.local_dining,
+                      title: 'Eat 20 gram B2 today',
+                      lesson: 'Challange day 1',
+                      status: 'Completed!',
+                      color: Colors.green[100]!,
+                      statusIcon: Icons.check_circle,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildJourneyCard(
+                      icon: Icons.fastfood,
+                      title: 'Cheating day',
+                      lesson: 'Challange day 1',
+                      status: '2 hours',
+                      color: Colors.blue[100]!,
+                      statusIcon: Icons.timer,
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusCards() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatusCard(
+            title: 'Learning streak',
+            value: '5/7',
+            unit: 'Days',
+            color: Colors.purple,
+            icon: Icons.trending_up,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildStatusCard(
+            title: 'Activity & Results',
+            value: '9/12',
+            unit: '',
+            color: Colors.blue,
+            icon: Icons.bar_chart,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusCard({
+    required String title,
+    required String value,
+    required String unit,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(icon, color: color, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
+            Text(
+              unit,
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+      {required TextEditingController controller, required String label}) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.number,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        fillColor: Color(0xFFF3F3F3),
+        filled: true,
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter your $label';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildDropdownField({
+    required String value,
+    required String label,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      items: items.map((String item) {
+        return DropdownMenuItem<String>(
+          value: item,
+          child: Text(item),
+        );
+      }).toList(),
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        fillColor: Color(0xFFF3F3F3),
+        filled: true,
+      ),
+    );
+  }
+
+  Widget _buildJourneyCard({
+    required IconData icon,
+    required String title,
+    required String lesson,
+    required String status,
+    required Color color,
+    required IconData statusIcon,
+  }) {
+    return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      color: color,
+      child: ListTile(
+        leading: Icon(icon, size: 40),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(lesson),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(statusIcon, color: Colors.green, size: 24),
+            Text(
+              status,
+              style: const TextStyle(
+                color: Colors.green,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
     );
