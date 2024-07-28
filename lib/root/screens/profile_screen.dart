@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:nutricare/auth/screens/login_screen.dart';
+import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -9,6 +12,48 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  String _userName = '';
+  String _userAge = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      setState(() {
+        _userName = "${userDoc['first_name']} ${userDoc['last_name']}";
+        _userAge = _calculateAge(userDoc['dob']);
+      });
+    }
+  }
+
+  String _calculateAge(String dobString) {
+    DateTime dob = DateFormat('yyyy-MM-dd').parse(dobString);
+    DateTime today = DateTime.now();
+    int age = today.year - dob.year;
+    if (today.month < dob.month ||
+        (today.month == dob.month && today.day < dob.day)) {
+      age--;
+    }
+    return "$age Years old";
+  }
+
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,17 +95,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Georgia V.',
-                  style: TextStyle(
+                Text(
+                  _userName,
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  '24 Years old',
-                  style: TextStyle(
+                Text(
+                  _userAge,
+                  style: const TextStyle(
                     fontSize: 16,
                     color: Colors.grey,
                   ),
@@ -76,13 +121,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     () {
                   // Add action for Terms & Conditions
                 }),
-                _buildProfileOption(Icons.logout, 'Logout', () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const LoginScreen()),
-                  );
-                }),
+                _buildProfileOption(Icons.logout, 'Logout', _logout),
               ],
             ),
           ),

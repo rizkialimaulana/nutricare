@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:nutricare/auth/screens/register_screen.dart';
 import 'package:nutricare/main_screen.dart';
 
@@ -15,19 +16,27 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _rememberMe = false;
 
-  void _login() {
+  void _login() async {
     if (_formKey.currentState!.validate()) {
-      // Implement login functionality here
-      // Simulate login process and navigate to MainScreen
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Logging in...')),
-      );
-
-      // Navigate to MainScreen after login
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainScreen()),
-      );
+      try {
+        await FirebaseAuth.instance.signInWithEmailAndPassword(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
+        // Navigate to MainScreen after login
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+        );
+      } on FirebaseAuthException catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to sign in: ${e.message}')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('An unexpected error occurred: $e')),
+        );
+      }
     }
   }
 
@@ -86,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
                               decoration: InputDecoration(
-                                labelText: 'username / email',
+                                labelText: 'Username / Email',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -107,7 +116,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               controller: _passwordController,
                               obscureText: true,
                               decoration: InputDecoration(
-                                labelText: 'password',
+                                labelText: 'Password',
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -145,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     // Implement forgot password functionality here
                                   },
                                   child: const Text(
-                                    'forgot password?',
+                                    'Forgot password?',
                                     style: TextStyle(color: Colors.orange),
                                   ),
                                 ),
@@ -255,8 +264,8 @@ class _LoginScreenState extends State<LoginScreen> {
       onPressed: onPressed,
       child: Icon(icon, color: Colors.white),
       style: ElevatedButton.styleFrom(
-        shape: CircleBorder(),
-        padding: EdgeInsets.all(16),
+        shape: const CircleBorder(),
+        padding: const EdgeInsets.all(16),
         backgroundColor: color,
       ),
     );

@@ -36,12 +36,6 @@ class AddDataModal extends StatelessWidget {
           const SizedBox(height: 16.0),
           _buildTextField("Height (cm)", "e.g., 170"),
           const SizedBox(height: 16.0),
-          _buildTextField("Age", "e.g., 25"),
-          const SizedBox(height: 16.0),
-          _buildDropdown("Gender", "Male"),
-          const SizedBox(height: 16.0),
-          _buildDropdown("Activity Level", "Sedentary"),
-          const SizedBox(height: 24.0),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -11,12 +13,28 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late DateTime _selectedDate;
   late List<DateTime> _weekDates;
+  String _userName = 'User';
 
   @override
   void initState() {
     super.initState();
     _selectedDate = DateTime.now();
     _weekDates = _generateWeekDates(_selectedDate);
+
+    _getUserDetails();
+  }
+
+  Future<void> _getUserDetails() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      setState(() {
+        _userName = userDoc['first_name'] + ' ' + userDoc['last_name'];
+      });
+    }
   }
 
   List<DateTime> _generateWeekDates(DateTime currentDate) {
@@ -39,15 +57,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 children: [
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
-                      Text(
+                    children: [
+                      const Text(
                         'Morning,',
                         style: TextStyle(
                             fontSize: 20, fontWeight: FontWeight.w400),
                       ),
                       Text(
-                        'Georgia V.',
-                        style: TextStyle(
+                        _userName,
+                        style: const TextStyle(
                             fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -63,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 16),
               TextField(
                 decoration: InputDecoration(
-                  prefixIcon: Icon(Icons.search),
+                  prefixIcon: const Icon(Icons.search),
                   hintText: 'Search',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),

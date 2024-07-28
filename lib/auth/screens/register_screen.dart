@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:nutricare/auth/screens/login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -12,15 +14,62 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   final TextEditingController _dobController = TextEditingController();
   final TextEditingController _pregnancyAgeController = TextEditingController();
 
-  void _register() {
+  void _register() async {
     if (_formKey.currentState!.validate()) {
-      // Implement registration functionality here
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Registering...')),
-      );
+      try {
+        UserCredential userCredential =
+            await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          email: _emailController.text,
+          password: _passwordController.text,
+        );
+
+        // Simpan data pengguna ke Firestore
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userCredential.user!.uid)
+            .set({
+          'first_name': _firstNameController.text,
+          'last_name': _lastNameController.text,
+          'email': _emailController.text,
+          'dob': _dobController.text, // Mengubah 'age' menjadi 'dob'
+          'pregnancy_age': _pregnancyAgeController.text,
+        });
+
+        // Perbarui profil pengguna dengan nama
+        await userCredential.user!.updateDisplayName(
+            "${_firstNameController.text} ${_lastNameController.text}");
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration successful')),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
+      } on FirebaseAuthException catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to register: ${e.message}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _selectDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _dobController.text = "${picked.toLocal()}".split(' ')[0];
+      });
     }
   }
 
@@ -124,17 +173,57 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               },
                             ),
                             const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _emailController,
+                              decoration: InputDecoration(
+                                labelText: 'Email',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your email';
+                                } else if (!RegExp(r'^[^@]+@[^@]+\.[^@]+')
+                                    .hasMatch(value)) {
+                                  return 'Please enter a valid email address';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            TextFormField(
+                              controller: _passwordController,
+                              decoration: InputDecoration(
+                                labelText: 'Password',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              obscureText: true,
+                              validator: (value) {
+                                if (value == null || value.isEmpty) {
+                                  return 'Please enter your password';
+                                } else if (value.length < 6) {
+                                  return 'Password must be at least 6 characters long';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
                             Row(
                               children: [
                                 Expanded(
                                   child: TextFormField(
                                     controller: _dobController,
                                     decoration: InputDecoration(
-                                      labelText: 'Date of birth',
+                                      labelText: 'Date of Birth',
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
+                                    readOnly: true,
+                                    onTap: () => _selectDate(context),
                                     validator: (value) {
                                       if (value == null || value.isEmpty) {
                                         return 'Please enter your date of birth';
