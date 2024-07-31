@@ -14,14 +14,17 @@ class _HomeScreenState extends State<HomeScreen> {
   late DateTime _selectedDate;
   late List<DateTime> _weekDates;
   String _userName = 'User';
+  List<DocumentSnapshot> _foodRecommendations = [];
+  bool _hasNutritionResult = false;
 
   @override
   void initState() {
     super.initState();
     _selectedDate = DateTime.now();
     _weekDates = _generateWeekDates(_selectedDate);
-
     _getUserDetails();
+    _fetchFoodRecommendations();
+    _checkNutritionResult();
   }
 
   Future<void> _getUserDetails() async {
@@ -37,6 +40,34 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Future<void> _fetchFoodRecommendations() async {
+    QuerySnapshot snapshot = await FirebaseFirestore.instance
+        .collection('food_recommendations')
+        .get();
+    setState(() {
+      _foodRecommendations = snapshot.docs;
+    });
+  }
+
+  Future<void> _checkNutritionResult() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('nutrition_results')
+          .where('userId', isEqualTo: user.uid)
+          .get();
+      setState(() {
+        _hasNutritionResult = snapshot.docs.isNotEmpty;
+      });
+    }
+  }
+
+  Future<void> _refreshPage() async {
+    await _getUserDetails();
+    await _fetchFoodRecommendations();
+    await _checkNutritionResult();
+  }
+
   List<DateTime> _generateWeekDates(DateTime currentDate) {
     final startOfWeek =
         currentDate.subtract(Duration(days: currentDate.weekday - 1));
@@ -47,83 +78,87 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Morning,',
-                        style: TextStyle(
-                            fontSize: 20, fontWeight: FontWeight.w400),
-                      ),
-                      Text(
-                        _userName,
-                        style: const TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  CircleAvatar(
-                    radius: 24,
-                    backgroundImage: NetworkImage(
-                      'https://example.com/profile.jpg', // Placeholder image URL
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                decoration: InputDecoration(
-                  prefixIcon: const Icon(Icons.search),
-                  hintText: 'Search',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  filled: true,
-                  fillColor: Colors.grey[200],
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildDaySelector(),
-              const SizedBox(height: 16),
-              const Text(
-                'Morning',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              Expanded(
-                child: GridView.count(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 16.0,
-                  mainAxisSpacing: 16.0,
+        child: RefreshIndicator(
+          onRefresh: _refreshPage,
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    _buildMealCard(
-                      'Omega-3',
-                      '2 pcs of Tuna',
-                      '08:00 am',
-                      Icons.healing,
-                      Colors.orange[100]!,
-                      '20 Grams',
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Morning,',
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.w400),
+                        ),
+                        Text(
+                          _userName,
+                          style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
-                    _buildMealCard(
-                      'Carbo',
-                      '0.5kg of rice',
-                      '08:00 am',
-                      Icons.health_and_safety_outlined,
-                      Colors.blue[100]!,
-                      '1 Kilos',
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundImage: NetworkImage(
+                        'https://example.com/profile.jpg', // Placeholder image URL
+                      ),
                     ),
                   ],
                 ),
-              ),
-            ],
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.search),
+                    hintText: 'Search',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[200],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildDaySelector(),
+                const SizedBox(height: 16),
+                const Text(
+                  'Morning',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: _hasNutritionResult
+                      ? _buildFoodRecommendationsGrid()
+                      : Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              Text(
+                                'You have no nutrition results yet.',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Please calculate your nutrition first.',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -180,6 +215,29 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildFoodRecommendationsGrid() {
+    return GridView.builder(
+      physics: const AlwaysScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 16.0,
+        mainAxisSpacing: 16.0,
+      ),
+      itemCount: _foodRecommendations.length,
+      itemBuilder: (context, index) {
+        DocumentSnapshot food = _foodRecommendations[index];
+        return _buildMealCard(
+          food['name'],
+          '${food['porsi']} portions',
+          '08:00 am', // Example time, you can modify as needed
+          Icons.fastfood,
+          Colors.orange[100]!,
+          '${food['kalori']} kcal',
+        );
+      },
     );
   }
 
